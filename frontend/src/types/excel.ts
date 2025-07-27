@@ -22,7 +22,7 @@ export interface ExcelAnalysisResult {
     sheet_names: string[];
     total_sheets: number;
   };
-  pandas_info?: Record<string, any>;
+  pandas_info?: Record<string, unknown>;
   pandas_error?: string;
   file_id?: string;
 }
