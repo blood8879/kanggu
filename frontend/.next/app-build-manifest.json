@@ -16,10 +16,15 @@
       "static/chunks/main-app.js",
       "static/chunks/app/api/analyze-sample/route.js"
     ],
-    "/_not-found/page": [
+    "/api/process-excel/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/_not-found/page.js"
+      "static/chunks/app/api/process-excel/route.js"
+    ],
+    "/api/download/[fileId]/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/download/[fileId]/route.js"
     ]
   }
 }

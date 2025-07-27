@@ -45,8 +45,17 @@ export async function POST(request: NextRequest) {
       if (sheet && sheet[inputValue.cell]) {
         // 기존 셀 값에서 패턴을 실제 값으로 대체
         const originalValue = String(sheet[inputValue.cell].v || '');
-        const patternRegex = new RegExp(`\\{\\{${inputValue.pattern}\\}\\}`, 'g');
-        const newValue = originalValue.replace(patternRegex, inputValue.value);
+        
+        // 다양한 패턴 형태 지원
+        const patterns = [
+          new RegExp(`\\{\\{${inputValue.pattern}\\}\\}`, 'g'),  // {{pattern}}
+          new RegExp(`\\b${inputValue.pattern}\\b`, 'gi')       // input1, Input2 등
+        ];
+        
+        let newValue = originalValue;
+        patterns.forEach(patternRegex => {
+          newValue = newValue.replace(patternRegex, inputValue.value);
+        });
         
         // 셀 값 업데이트
         sheet[inputValue.cell].v = newValue;
