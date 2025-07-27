@@ -29,6 +29,7 @@ export default function Home() {
 
     try {
       console.log('API_BASE_URL:', process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? window.location.origin : ''))
+      console.log('Environment check - NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL)
       const result = await excelApi.analyzeSampleExcel()
       console.log('Analysis result:', result)
       setAnalysisResult(result)
