@@ -16,8 +16,6 @@ export async function POST(request: NextRequest) {
     const body: ProcessExcelRequest = await request.json();
     const { file_id, input_values } = body;
     
-    let workbook: XLSX.WorkBook;
-    
     // 항상 sample.xlsx 템플릿을 사용
     const sampleFilePath = path.join(process.cwd(), 'frontend', 'public', 'sample.xlsx');
     
@@ -30,7 +28,7 @@ export async function POST(request: NextRequest) {
     
     console.log('Using sample.xlsx template from:', sampleFilePath);
     const fileBuffer = fs.readFileSync(sampleFilePath);
-    workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
 
     // input_values를 사용하여 Excel 파일 수정
     input_values.forEach(inputValue => {
@@ -73,8 +71,6 @@ export async function POST(request: NextRequest) {
     
     if (isDev) {
       // 로컬 개발 환경: 파일 시스템에 저장
-      const fs = require('fs');
-      const path = require('path');
       const tempDir = path.join(process.cwd(), '.tmp');
       
       if (!fs.existsSync(tempDir)) {

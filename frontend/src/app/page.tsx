@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { InputForm } from "@/components/InputForm";
 import { DownloadButton } from "@/components/DownloadButton";
 import { excelApi } from "@/lib/api";
@@ -23,12 +23,7 @@ export default function Home() {
   const [downloadUrl, setDownloadUrl] = useState<string>("");
   const [error, setError] = useState<string>("");
 
-  // 페이지 로드 시 자동으로 sample.xlsx 분석
-  useEffect(() => {
-    loadSampleExcel();
-  }, []);
-
-  const loadSampleExcel = async () => {
+  const loadSampleExcel = useCallback(async () => {
     setIsAnalyzing(true);
     setError("");
     setAnalysisResult(null);
@@ -60,7 +55,12 @@ export default function Home() {
     } finally {
       setIsAnalyzing(false);
     }
-  };
+  }, []);
+
+  // 페이지 로드 시 자동으로 sample.xlsx 분석
+  useEffect(() => {
+    loadSampleExcel();
+  }, [loadSampleExcel]);
 
   const handleInputSubmit = async (values: Record<string, string>) => {
     if (!analysisResult?.file_id) return;
