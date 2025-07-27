@@ -16,9 +16,12 @@ export async function GET(
 ) {
   try {
     const { fileId } = await params;
+    console.log('Download requested for fileId:', fileId);
+    console.log('Available files in store:', Array.from(globalThis.fileStore?.keys() || []));
     
     // 글로벌 저장소에서 파일 찾기
     const fileBuffer = globalThis.fileStore?.get(fileId);
+    console.log('File found:', !!fileBuffer);
     
     if (!fileBuffer) {
       return NextResponse.json(

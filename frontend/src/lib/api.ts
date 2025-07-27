@@ -33,7 +33,8 @@ export const excelApi = {
   },
 
   downloadFile: (fileId: string): string => {
-    return `${API_BASE_URL}/api/download/${fileId}`
+    // 상대 경로를 반환하여 현재 도메인 자동 사용
+    return `/api/download/${fileId}`
   },
 
   deleteFile: async (fileId: string): Promise<void> => {

@@ -72,8 +72,13 @@ export async function POST(request: NextRequest) {
     // 처리된 파일 ID 생성
     const processedFileId = `processed-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
+    console.log('Storing file with ID:', processedFileId);
+    console.log('Buffer size:', processedBuffer.length);
+    
     // 글로벌 저장소에 임시 저장
     globalThis.fileStore?.set(processedFileId, processedBuffer);
+    
+    console.log('Files in store after saving:', Array.from(globalThis.fileStore?.keys() || []));
 
     const downloadUrl = `/api/download/${processedFileId}`;
 
