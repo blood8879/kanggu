@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       const sheet = workbook.Sheets[sheetName];
       const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1:A1');
       
-      const inputFields = [];
+      const inputFields: any[] = [];
       
       // 셀들을 순회하며 input 패턴 찾기
       for (let row = range.s.r; row <= range.e.r; row++) {
@@ -45,25 +45,33 @@ export async function GET(request: NextRequest) {
           
           if (cell && cell.v) {
             const cellValue = String(cell.v);
-            // input 패턴 검색 (예: {{pattern}})
-            const inputPattern = /\{\{([^}]+)\}\}/g;
-            let match;
-            
-            while ((match = inputPattern.exec(cellValue)) !== null) {
-              const pattern = match[1];
-              const inputField = {
-                pattern,
-                cell: cellAddress,
-                row: row + 1, // 1-based indexing
-                column: col + 1, // 1-based indexing
-                column_letter: XLSX.utils.encode_col(col),
-                original_value: cellValue,
-                sheet: sheetName
-              };
+            // input 패턴 검색 (예: {{pattern}}, input1, Input2 등)
+            const patterns = [
+              /\{\{([^}]+)\}\}/g,  // {{pattern}} 형태
+              /\b(input\d+)\b/gi,  // input1, input2 등
+              /\b(Input\d+)\b/g    // Input1, Input2 등
+            ];
+            // 각 패턴에 대해 검색
+            patterns.forEach(pattern => {
+              let match;
+              const regex = new RegExp(pattern.source, pattern.flags);
               
-              inputFields.push(inputField);
-              result.input_fields.push(inputField);
-            }
+              while ((match = regex.exec(cellValue)) !== null) {
+                const patternValue = match[1];
+                const inputField = {
+                  pattern: patternValue,
+                  cell: cellAddress,
+                  row: row + 1, // 1-based indexing
+                  column: col + 1, // 1-based indexing
+                  column_letter: XLSX.utils.encode_col(col),
+                  original_value: cellValue,
+                  sheet: sheetName
+                };
+                
+                inputFields.push(inputField);
+                result.input_fields.push(inputField);
+              }
+            });
           }
         }
       }
