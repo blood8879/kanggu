@@ -1,9 +1,4 @@
 {
-  "/api/process-excel/route": "app/api/process-excel/route.js",
-  "/api/download/[fileId]/route": "app/api/download/[fileId]/route.js",
-  "/api/analyze-excel/route": "app/api/analyze-excel/route.js",
-  "/api/analyze-sample/route": "app/api/analyze-sample/route.js",
-  "/favicon.ico/route": "app/favicon.ico/route.js",
   "/_not-found/page": "app/_not-found/page.js",
   "/page": "app/page.js"
 }

@@ -28,11 +28,17 @@ export default function Home() {
     setDownloadUrl('')
 
     try {
+      console.log('API_BASE_URL:', process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? window.location.origin : ''))
       const result = await excelApi.analyzeSampleExcel()
+      console.log('Analysis result:', result)
       setAnalysisResult(result)
     } catch (err) {
-      setError('Sample Excel 파일 분석 중 오류가 발생했습니다.')
       console.error('Sample Excel analysis error:', err)
+      if (err instanceof Error) {
+        setError(`Sample Excel 파일 분석 중 오류가 발생했습니다: ${err.message}`)
+      } else {
+        setError('Sample Excel 파일 분석 중 오류가 발생했습니다.')
+      }
     } finally {
       setIsAnalyzing(false)
     }

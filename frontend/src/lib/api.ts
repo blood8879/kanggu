@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { ExcelAnalysisResult, ProcessExcelRequest, ProcessExcelResponse } from '@/types/excel'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ''
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? window.location.origin : '')
 
 const api = axios.create({
   baseURL: API_BASE_URL,
