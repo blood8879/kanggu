@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(pip3 install:*)",
+      "Bash(source:*)",
+      "Bash(pip install:*)",
+      "Bash(mkdir:*)",
+      "Bash(npx create-next-app:*)",
+      "Bash(npx shadcn:*)",
+      "Bash(npm install:*)",
+      "Bash(chmod:*)",
+      "Bash(rm:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(ls:*)",
+      "Bash(curl:*)"
+    ],
+    "deny": []
+  }
+}
