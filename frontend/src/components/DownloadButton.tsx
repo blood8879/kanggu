@@ -1,37 +1,44 @@
-'use client'
+"use client";
 
-import React from 'react'
-import { Download } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import React from "react";
+import { Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 interface DownloadButtonProps {
-  downloadUrl?: string
-  filename?: string
-  onDownload?: () => void
-  disabled?: boolean
+  downloadUrl?: string;
+  filename?: string;
+  onDownload?: () => void;
+  disabled?: boolean;
 }
 
-export function DownloadButton({ 
-  downloadUrl, 
-  filename = 'processed_excel.xlsx',
+export function DownloadButton({
+  downloadUrl,
+  filename = "processed_excel.xlsx",
   onDownload,
-  disabled = false 
+  disabled = false,
 }: DownloadButtonProps) {
   const handleDownload = () => {
     if (downloadUrl) {
-      const link = document.createElement('a')
-      link.href = `http://localhost:8000${downloadUrl}`
-      link.download = filename
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+      const link = document.createElement("a");
+      // link.href = `http://localhost:8000${downloadUrl}`
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
-    onDownload?.()
-  }
+    onDownload?.();
+  };
 
   if (!downloadUrl) {
-    return null
+    return null;
   }
 
   return (
@@ -46,15 +53,11 @@ export function DownloadButton({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Button 
-          onClick={handleDownload}
-          disabled={disabled}
-          className="w-full"
-        >
+        <Button onClick={handleDownload} disabled={disabled} className="w-full">
           <Download className="h-4 w-4 mr-2" />
           Excel 파일 다운로드
         </Button>
       </CardContent>
     </Card>
-  )
+  );
 }
