@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
 
-// 임시 파일 저장소 (process-excel에서와 동일한 저장소를 사용해야 함)
-const fileStore = new Map<string, Buffer>();
+// 로컬 개발 환경에서는 파일 시스템을 사용
+const isDev = process.env.NODE_ENV === 'development';
+const tempDir = path.join(process.cwd(), '.tmp');
+
+// 임시 디렉토리 생성
+if (isDev && !fs.existsSync(tempDir)) {
+  fs.mkdirSync(tempDir, { recursive: true });
+}
 
 // 다른 API route에서 저장한 파일에 접근하기 위한 글로벌 저장소
 if (typeof globalThis !== 'undefined') {
@@ -17,11 +25,24 @@ export async function GET(
   try {
     const { fileId } = await params;
     console.log('Download requested for fileId:', fileId);
-    console.log('Available files in store:', Array.from(globalThis.fileStore?.keys() || []));
     
-    // 글로벌 저장소에서 파일 찾기
-    const fileBuffer = globalThis.fileStore?.get(fileId);
-    console.log('File found:', !!fileBuffer);
+    let fileBuffer: Buffer | undefined;
+    
+    if (isDev) {
+      // 로컬 개발 환경: 파일 시스템에서 읽기
+      const filePath = path.join(tempDir, `${fileId}.xlsx`);
+      console.log('Looking for file at:', filePath);
+      
+      if (fs.existsSync(filePath)) {
+        fileBuffer = fs.readFileSync(filePath);
+        console.log('File found in filesystem');
+      }
+    } else {
+      // 프로덕션 환경: 메모리에서 읽기
+      console.log('Available files in store:', Array.from(globalThis.fileStore?.keys() || []));
+      fileBuffer = globalThis.fileStore?.get(fileId);
+      console.log('File found in memory:', !!fileBuffer);
+    }
     
     if (!fileBuffer) {
       return NextResponse.json(

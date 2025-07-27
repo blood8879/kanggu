@@ -27,8 +27,9 @@ export function DownloadButton({
   const handleDownload = () => {
     if (downloadUrl) {
       const link = document.createElement("a");
-      // link.href = `http://localhost:8000${downloadUrl}`
-      link.href = downloadUrl;
+      // link.href = `http://localhost:8000${downloadUrl}`;
+      // link.href = downloadUrl;
+      link.href = `${process.env.NEXT_PUBLIC_API_URL}${downloadUrl}`;
       link.download = filename;
       document.body.appendChild(link);
       link.click();

@@ -18,26 +18,19 @@ export async function POST(request: NextRequest) {
     
     let workbook: XLSX.WorkBook;
     
-    if (file_id === 'sample') {
-      // sample.xlsx 파일 처리
-      const sampleFilePath = path.join(process.cwd(), 'public', 'sample.xlsx');
-      
-      if (!fs.existsSync(sampleFilePath)) {
-        return NextResponse.json({
-          success: false,
-          message: 'sample.xlsx 파일을 찾을 수 없습니다.'
-        } as ProcessExcelResponse);
-      }
-      
-      const fileBuffer = fs.readFileSync(sampleFilePath);
-      workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-    } else {
-      // 업로드된 파일 처리 (현재는 메모리에 저장되지 않으므로 에러)
+    // 항상 sample.xlsx 템플릿을 사용
+    const sampleFilePath = path.join(process.cwd(), 'frontend', 'public', 'sample.xlsx');
+    
+    if (!fs.existsSync(sampleFilePath)) {
       return NextResponse.json({
         success: false,
-        message: '업로드된 파일 처리는 아직 구현되지 않았습니다.'
+        message: 'sample.xlsx 템플릿 파일을 찾을 수 없습니다.'
       } as ProcessExcelResponse);
     }
+    
+    console.log('Using sample.xlsx template from:', sampleFilePath);
+    const fileBuffer = fs.readFileSync(sampleFilePath);
+    workbook = XLSX.read(fileBuffer, { type: 'buffer' });
 
     // input_values를 사용하여 Excel 파일 수정
     input_values.forEach(inputValue => {
@@ -75,8 +68,26 @@ export async function POST(request: NextRequest) {
     console.log('Storing file with ID:', processedFileId);
     console.log('Buffer size:', processedBuffer.length);
     
-    // 글로벌 저장소에 임시 저장
-    globalThis.fileStore?.set(processedFileId, processedBuffer);
+    // 개발/프로덕션 환경에 따른 저장 방식
+    const isDev = process.env.NODE_ENV === 'development';
+    
+    if (isDev) {
+      // 로컬 개발 환경: 파일 시스템에 저장
+      const fs = require('fs');
+      const path = require('path');
+      const tempDir = path.join(process.cwd(), '.tmp');
+      
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+      
+      const filePath = path.join(tempDir, `${processedFileId}.xlsx`);
+      fs.writeFileSync(filePath, processedBuffer);
+      console.log('File saved to filesystem:', filePath);
+    } else {
+      // 프로덕션 환경: 메모리에 저장
+      globalThis.fileStore?.set(processedFileId, processedBuffer);
+    }
     
     console.log('Files in store after saving:', Array.from(globalThis.fileStore?.keys() || []));
 
