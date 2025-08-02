@@ -17,7 +17,8 @@ export async function POST(request: NextRequest) {
     const { file_id, input_values } = body;
     
     // 항상 sample.xlsx 템플릿을 사용
-    const sampleFilePath = path.join(process.cwd(), 'frontend', 'public', 'sample.xlsx');
+    // Vercel 배포 환경과 로컬 환경을 모두 고려한 경로
+    const sampleFilePath = path.join(process.cwd(), 'public', 'sample.xlsx');
     
     if (!fs.existsSync(sampleFilePath)) {
       return NextResponse.json({
