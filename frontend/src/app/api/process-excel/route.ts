@@ -28,8 +28,19 @@ export async function POST(request: NextRequest) {
     }
     
     console.log('Using sample.xlsx template from:', sampleFilePath);
+    console.log('File exists:', fs.existsSync(sampleFilePath));
+    
     const fileBuffer = fs.readFileSync(sampleFilePath);
-    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+    console.log('Template file buffer size:', fileBuffer.length);
+    
+    // 템플릿 파일을 정확히 읽기 위해 추가 옵션 설정
+    const workbook = XLSX.read(fileBuffer, { 
+      type: 'buffer',
+      cellStyles: true,
+      cellHTML: false,
+      cellFormula: true,
+      cellDates: true
+    });
 
     // input_values를 사용하여 Excel 파일 수정
     input_values.forEach(inputValue => {
@@ -55,10 +66,12 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // 처리된 파일을 buffer로 변환
+    // 처리된 파일을 buffer로 변환 (스타일 유지)
     const processedBuffer = XLSX.write(workbook, { 
       type: 'buffer', 
-      bookType: 'xlsx' 
+      bookType: 'xlsx',
+      cellStyles: true,
+      compression: false
     });
 
     // 처리된 파일 ID 생성
