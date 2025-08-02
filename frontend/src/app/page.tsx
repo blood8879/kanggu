@@ -55,7 +55,7 @@ export default function Home() {
     } finally {
       setIsAnalyzing(false);
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 페이지 로드 시 자동으로 sample.xlsx 분석
   useEffect(() => {

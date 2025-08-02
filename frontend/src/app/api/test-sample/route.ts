@@ -28,7 +28,7 @@ export async function GET() {
     } else {
       // public 디렉토리 내용 확인
       const publicDir = path.join(process.cwd(), 'public');
-      let publicContents = [];
+      let publicContents: string[] = [];
       
       if (fs.existsSync(publicDir)) {
         publicContents = fs.readdirSync(publicDir);
