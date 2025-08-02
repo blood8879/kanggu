@@ -1,13 +1,82 @@
 import { NextRequest, NextResponse } from 'next/server';
-import ExcelJS from 'exceljs';
 import { ProcessExcelRequest, ProcessExcelResponse } from '@/types/excel';
 import path from 'path';
 import fs from 'fs';
+import JSZip from 'jszip';
 
 // 글로벌 파일 저장소 설정
 if (typeof globalThis !== 'undefined') {
   if (!globalThis.fileStore) {
     globalThis.fileStore = new Map<string, Buffer>();
+  }
+}
+
+
+// ZIP 내부의 XML 파일에서 패턴을 교체하는 함수
+async function replaceInZipXml(buffer: Buffer, patterns: { pattern: string; value: string }[]): Promise<Buffer> {
+  try {
+    const zip = new JSZip();
+    await zip.loadAsync(buffer);
+    
+    console.log('ZIP loaded, files:', Object.keys(zip.files));
+    
+    // sharedStrings.xml에서 패턴 교체
+    const sharedStringsFile = zip.file('xl/sharedStrings.xml');
+    if (sharedStringsFile) {
+      let sharedStringsContent = await sharedStringsFile.async('string');
+      console.log('Original sharedStrings length:', sharedStringsContent.length);
+      
+      patterns.forEach(({ pattern, value }) => {
+        const escapedPattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(escapedPattern, 'g');
+        const before = sharedStringsContent;
+        sharedStringsContent = sharedStringsContent.replace(regex, value);
+        if (before !== sharedStringsContent) {
+          console.log(`Replaced "${pattern}" with "${value}" in sharedStrings.xml`);
+        }
+      });
+      
+      // 수정된 내용으로 다시 저장
+      zip.file('xl/sharedStrings.xml', sharedStringsContent);
+    }
+    
+    // worksheet XML 파일들에서도 패턴 교체
+    const worksheetFiles = Object.keys(zip.files).filter(name => 
+      name.startsWith('xl/worksheets/') && name.endsWith('.xml')
+    );
+    
+    for (const worksheetPath of worksheetFiles) {
+      const worksheetFile = zip.file(worksheetPath);
+      if (worksheetFile) {
+        let worksheetContent = await worksheetFile.async('string');
+        
+        patterns.forEach(({ pattern, value }) => {
+          const escapedPattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(escapedPattern, 'g');
+          const before = worksheetContent;
+          worksheetContent = worksheetContent.replace(regex, value);
+          if (before !== worksheetContent) {
+            console.log(`Replaced "${pattern}" with "${value}" in ${worksheetPath}`);
+          }
+        });
+        
+        zip.file(worksheetPath, worksheetContent);
+      }
+    }
+    
+    // 새로운 ZIP 버퍼 생성
+    const newBuffer = await zip.generateAsync({
+      type: 'nodebuffer',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 9 }
+    });
+    
+    console.log('New ZIP buffer size:', newBuffer.length);
+    return newBuffer;
+    
+  } catch (error) {
+    console.error('ZIP 처리 실패:', error);
+    return buffer; // 실패시 원본 반환
   }
 }
 
@@ -26,52 +95,24 @@ export async function POST(request: NextRequest) {
       } as ProcessExcelResponse);
     }
     
-    console.log('Using ExcelJS for perfect formatting preservation');
+    console.log('Using ZIP-level pattern replacement to preserve formatting perfectly');
     console.log('Template path:', sampleFilePath);
+    console.log('Template file exists:', fs.existsSync(sampleFilePath));
     
-    // ExcelJS를 사용하여 완벽한 서식 유지
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.readFile(sampleFilePath);
+    // 원본 파일을 바이너리로 읽어서 복사
+    const originalBuffer = fs.readFileSync(sampleFilePath);
+    console.log('Original template file size:', originalBuffer.length);
+
+    // ZIP 레벨에서 패턴 교체 (완전한 포맷 보존)
+    const patterns = input_values.map(inputValue => ({
+      pattern: inputValue.pattern,
+      value: inputValue.value
+    }));
     
-    console.log('Template loaded with ExcelJS, worksheets:', workbook.worksheets.length);
-
-    // input_values를 사용하여 Excel 파일 수정
-    input_values.forEach(inputValue => {
-      const worksheet = workbook.getWorksheet(inputValue.sheet);
-      
-      if (worksheet) {
-        const cell = worksheet.getCell(inputValue.cell);
-        const oldValue = cell.value;
-        
-        console.log(`Updating cell ${inputValue.cell} in sheet ${inputValue.sheet}: ${oldValue} -> ${inputValue.value}`);
-        
-        // 셀 값 업데이트 (서식 완전 유지)
-        cell.value = inputValue.value;
-        
-        // 기존 스타일 유지하면서 값만 변경
-        if (oldValue && typeof oldValue === 'string') {
-          const originalValue = String(oldValue);
-          
-          // 패턴 매칭으로 값 교체
-          const patterns = [
-            new RegExp(`\\{\\{${inputValue.pattern}\\}\\}`, 'g'),
-            new RegExp(`\\b${inputValue.pattern}\\b`, 'gi')
-          ];
-          
-          let newValue = originalValue;
-          patterns.forEach(patternRegex => {
-            newValue = newValue.replace(patternRegex, inputValue.value);
-          });
-          
-          cell.value = newValue;
-        }
-      }
-    });
-
-    // ExcelJS로 완벽한 서식 유지하여 버퍼 생성
-    const processedBuffer = Buffer.from(await workbook.xlsx.writeBuffer());
-    console.log('Processed file buffer size:', processedBuffer.length);
-
+    console.log('Patterns to replace:', patterns);
+    const processedBuffer = await replaceInZipXml(originalBuffer, patterns);
+    console.log('After ZIP replacement - Processed size:', processedBuffer.length);
+    
     // 처리된 파일 ID 생성
     const processedFileId = `processed-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
@@ -92,6 +133,7 @@ export async function POST(request: NextRequest) {
     } else {
       // 프로덕션 환경: 메모리에 저장
       globalThis.fileStore?.set(processedFileId, processedBuffer);
+      console.log('File saved to memory store');
     }
 
     const downloadUrl = `/api/download/${processedFileId}`;
