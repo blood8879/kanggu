@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import * as XLSX from 'xlsx';
 import ExcelJS from 'exceljs';
 import { ProcessExcelRequest, ProcessExcelResponse } from '@/types/excel';
 import path from 'path';
@@ -17,6 +18,7 @@ export async function POST(request: NextRequest) {
     const { file_id, input_values } = body;
     
     // 항상 sample.xlsx 템플릿을 사용
+    // Vercel 배포 환경과 로컬 환경을 모두 고려한 경로
     const sampleFilePath = path.join(process.cwd(), 'public', 'sample.xlsx');
     
     if (!fs.existsSync(sampleFilePath)) {
@@ -26,54 +28,67 @@ export async function POST(request: NextRequest) {
       } as ProcessExcelResponse);
     }
     
-    console.log('Using ExcelJS for perfect formatting preservation');
-    console.log('Template path:', sampleFilePath);
+    console.log('Using sample.xlsx template from:', sampleFilePath);
+    console.log('File exists:', fs.existsSync(sampleFilePath));
     
-    // ExcelJS를 사용하여 완벽한 서식 유지
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.readFile(sampleFilePath);
+    const fileBuffer = fs.readFileSync(sampleFilePath);
+    console.log('Template file buffer size:', fileBuffer.length);
     
-    console.log('Template loaded with ExcelJS, worksheets:', workbook.worksheets.length);
+    // 템플릿 파일을 정확히 읽기 위해 모든 옵션 활성화
+    const workbook = XLSX.read(fileBuffer, { 
+      type: 'buffer',
+      cellStyles: true,
+      cellHTML: false,
+      cellFormula: true,
+      cellDates: true,
+      cellNF: true,
+      sheetStubs: false,
+      bookVBA: true
+    });
 
     // input_values를 사용하여 Excel 파일 수정
     input_values.forEach(inputValue => {
-      const worksheet = workbook.getWorksheet(inputValue.sheet);
-      
-      if (worksheet) {
-        const cell = worksheet.getCell(inputValue.cell);
-        const oldValue = cell.value;
+      const sheet = workbook.Sheets[inputValue.sheet];
+      if (sheet && sheet[inputValue.cell]) {
+        // 기존 셀 값에서 패턴을 실제 값으로 대체
+        const originalValue = String(sheet[inputValue.cell].v || '');
         
-        console.log(`Updating cell ${inputValue.cell} in sheet ${inputValue.sheet}: ${oldValue} -> ${inputValue.value}`);
+        // 다양한 패턴 형태 지원
+        const patterns = [
+          new RegExp(`\\{\\{${inputValue.pattern}\\}\\}`, 'g'),  // {{pattern}}
+          new RegExp(`\\b${inputValue.pattern}\\b`, 'gi')       // input1, Input2 등
+        ];
         
-        // 셀 값 업데이트 (서식 완전 유지)
-        cell.value = inputValue.value;
+        let newValue = originalValue;
+        patterns.forEach(patternRegex => {
+          newValue = newValue.replace(patternRegex, inputValue.value);
+        });
         
-        // 기존 스타일 유지하면서 값만 변경
-        if (oldValue && typeof oldValue === 'string') {
-          const originalValue = String(oldValue);
-          
-          // 패턴 매칭으로 값 교체
-          const patterns = [
-            new RegExp(`\\{\\{${inputValue.pattern}\\}\\}`, 'g'),
-            new RegExp(`\\b${inputValue.pattern}\\b`, 'gi')
-          ];
-          
-          let newValue = originalValue;
-          patterns.forEach(patternRegex => {
-            newValue = newValue.replace(patternRegex, inputValue.value);
-          });
-          
-          cell.value = newValue;
-        }
+        // 셀 값 업데이트
+        sheet[inputValue.cell].v = newValue;
+        sheet[inputValue.cell].w = newValue; // 표시 값도 업데이트
       }
     });
 
-    // ExcelJS로 완벽한 서식 유지하여 버퍼 생성
-    const processedBuffer = Buffer.from(await workbook.xlsx.writeBuffer());
-    console.log('Processed file buffer size:', processedBuffer.length);
+    // 처리된 파일을 buffer로 변환 (모든 서식 유지)
+    const processedBuffer = XLSX.write(workbook, { 
+      type: 'buffer', 
+      bookType: 'xlsx',
+      cellStyles: true,
+      compression: false,
+      bookVBA: true,
+      Props: {
+        Title: 'Processed Excel File',
+        Subject: 'Generated from template',
+        Author: 'Excel Processor'
+      }
+    });
 
     // 처리된 파일 ID 생성
     const processedFileId = `processed-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    console.log('Storing file with ID:', processedFileId);
+    console.log('Buffer size:', processedBuffer.length);
     
     // 개발/프로덕션 환경에 따른 저장 방식
     const isDev = process.env.NODE_ENV === 'development';
@@ -93,6 +108,8 @@ export async function POST(request: NextRequest) {
       // 프로덕션 환경: 메모리에 저장
       globalThis.fileStore?.set(processedFileId, processedBuffer);
     }
+    
+    console.log('Files in store after saving:', Array.from(globalThis.fileStore?.keys() || []));
 
     const downloadUrl = `/api/download/${processedFileId}`;
 
@@ -102,7 +119,7 @@ export async function POST(request: NextRequest) {
       download_url: downloadUrl,
       processed_file_id: processedFileId
     } as ProcessExcelResponse);
-
+    
   } catch (error) {
     console.error('Excel 처리 오류:', error);
     return NextResponse.json({
@@ -111,3 +128,4 @@ export async function POST(request: NextRequest) {
     } as ProcessExcelResponse);
   }
 }
+
